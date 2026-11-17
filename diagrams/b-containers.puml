@@ -1,0 +1,42 @@
+@startuml
+!pragma layout smetana
+title Вариант 2. C4 Container — Kafka 4 + PostgreSQL
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 18
+skinparam defaultTextAlignment center
+skinparam titleFontSize 21
+
+skinparam ArrowFontSize 17
+skinparam ArrowColor #475569
+skinparam packageStyle rectangle
+skinparam packageFontSize 22
+skinparam packageBorderColor #64748B
+skinparam rectangleBorderColor #2563EB
+skinparam rectangleFontColor #0F172A
+skinparam rectangleBackgroundColor #EFF6FF
+skinparam databaseBorderColor #2563EB
+skinparam databaseBackgroundColor #EFF6FF
+skinparam queueBorderColor #2563EB
+skinparam queueBackgroundColor #EFF6FF
+skinparam nodesep 75
+skinparam ranksep 60
+
+rectangle "Сервисы банка" as Bank <<Внешняя система>> #F1F5F9
+package "Notification Platform" #FFFFFF {
+    rectangle "Приём уведомлений\nAPI + публикация\n(Python / FastAPI)" as API <<Контейнер>>
+    queue "Журнал заданий\n(Kafka 4)" as Broker <<Контейнер>>
+    rectangle "Доставка\n(Python)" as Delivery <<Контейнер>>
+    database "Уведомления, задания,\nстатусы\n(PostgreSQL 18)" as DB <<Контейнер>>
+}
+rectangle "Провайдеры\n(push / SMS / email)" as Providers <<Внешняя система>> #F1F5F9
+
+Bank -down-> API : 1. Передать уведомление
+API -right-> DB : 2. Сохранить\nуведомление и задание
+API -down-> Broker : 3. Поставить\nзадание в брокер
+Broker -down-> Delivery : 4. Взять задание
+Delivery -down-> Providers : 5. Отправить сообщение
+Delivery -right-> DB : Попытки и статусы
+Broker -[hidden]right-> DB
+@enduml

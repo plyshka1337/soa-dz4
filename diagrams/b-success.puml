@@ -1,0 +1,46 @@
+@startuml
+title Вариант 2. Доставка через push
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 18
+skinparam defaultTextAlignment center
+skinparam titleFontSize 21
+
+hide footbox
+autonumber
+skinparam sequenceParticipantFontSize 18
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 210
+skinparam sequence {
+    ArrowColor #334155
+    LifeLineBorderColor #94A3B8
+    ParticipantBackgroundColor #EFF6FF
+    ParticipantBorderColor #3B82F6
+    DividerBackgroundColor #E2E8F0
+    MessageSpacing 12
+}
+
+queue "Kafka" as Broker
+participant "Платформа" as Delivery
+database "БД" as DB
+participant "Push" as Push
+participant "Приложение" as App
+
+note over Broker,DB #F8FAFC: Уведомление уже сохранено.\nЗадание находится в брокере.
+
+== 1. Отправка push ==
+Broker -> Delivery: Задание на отправку
+Delivery -> DB: Записать попытку\nс ключом и сроком 2 с
+Delivery -> Push: Отправить push\nс ключом попытки
+Push --> Delivery: Запрос принят\n(ещё не доставка)
+Delivery -> DB: Сохранить ожидание
+Delivery -> Broker: Сохранить позицию чтения\n(commit offset)
+
+== 2. Подтверждение доставки ==
+Push -> App: Доставить уведомление
+App -> Delivery: Подтвердить получение
+Delivery -> DB: Записать «доставлено»
+note over Delivery,DB #ECFDF5: SMS и email не отправляются.
+caption Каждая запись в БД подтверждена до следующего шага.
+@enduml

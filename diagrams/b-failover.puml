@@ -1,0 +1,46 @@
+@startuml
+title Вариант 2. Переход с push на SMS
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 18
+skinparam defaultTextAlignment center
+skinparam titleFontSize 21
+
+hide footbox
+autonumber
+skinparam sequenceParticipantFontSize 18
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 210
+skinparam sequence {
+    ArrowColor #334155
+    LifeLineBorderColor #94A3B8
+    ParticipantBackgroundColor #EFF6FF
+    ParticipantBorderColor #3B82F6
+    DividerBackgroundColor #E2E8F0
+    MessageSpacing 12
+}
+
+participant "Платформа" as Delivery
+database "БД" as DB
+queue "Kafka" as Broker
+participant "SMS" as SMS
+
+note over Delivery,DB #F8FAFC: Push уже отправлен,\nно не подтверждён за 2 с.
+
+== 1. Отправка резервной SMS ==
+Delivery -> DB: Срок истёк: записать\nзадание на SMS
+Delivery -> Broker: Опубликовать задание
+Broker -> Delivery: Задание на SMS
+Delivery -> DB: Записать новую\nпопытку SMS
+Delivery -> SMS: Отправить SMS\nс ключом попытки
+SMS --> Delivery: Запрос принят\n(ещё не доставка)
+Delivery -> DB: Сохранить ожидание
+Delivery -> Broker: Сохранить позицию чтения\n(commit offset)
+
+== 2. SMS доставлена ==
+SMS -> Delivery: Подтверждение доставки
+Delivery -> DB: Записать «доставлено»
+note over Delivery,DB #ECFDF5: Email не отправляется.
+caption Публикация в брокер требует устойчивого подтверждения.\nКаждая запись в БД подтверждена до следующего шага.
+@enduml
